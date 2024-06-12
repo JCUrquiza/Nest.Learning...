@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import * as bcryptjs from 'bcryptjs';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { User } from './entities/user.entity';
@@ -16,11 +17,21 @@ export class AuthService {
   async create(createUserDto: CreateUserDto): Promise<User> {
     
     try {
-      const newUser = new this.userModel( createUserDto );
-      // 1.- Encriptar la contraseña
+      const { password, ...userData } = createUserDto;
+
+      const newUser = new this.userModel({
+        // 1.- Encriptar la contraseña
+        password: bcryptjs.hashSync( password, 10 ),
+        ...userData
+      });
+
       // 2.- Guardar el usuario
+      await newUser.save();
+
+      const { password:_, ...user } = newUser.toJSON();
+      
+      return user;
       // 3.- Generar el JWT
-      return await newUser.save();
     } catch (error) {
     
       if (error.code === 11000) {
